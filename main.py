@@ -172,13 +172,13 @@ def replace_dict_minors_with_others(dict_initial):
     dict_after['others'] = others
     return dict_after
 
-
+#analyser user agent avec woothee et suppression de la partie facultative
 
 ua_counter = {}
 os_counter = {}
 
-for index, row in userAgent.sort_values(['count'], ascending=False).iterrows():
-    ua = woothee.parse(row['user_agent'])    #woothee is a multi-language user-agent strings parser
+for index, row in userAgent.sort_values(['count'], ascending=False).iterrows(): #for index, row pour parcourir un dataframe.
+    ua = woothee.parse(row['user_agent'])    #woothee est un analyseur de chaînes d'agent utilisateur.
     uaKey = ua.get('name') + ' (' + ua.get('version') + ')'
     if not uaKey in ua_counter:
         ua_counter[uaKey] = 0
@@ -187,6 +187,10 @@ for index, row in userAgent.sort_values(['count'], ascending=False).iterrows():
     if not osKey in os_counter:
         os_counter[osKey] = 0
     os_counter[osKey] = os_counter[osKey] + 1
+
+
+
+
 
 plt.figure(figsize = (15, 10))
 plt.subplot(1,2,1)
@@ -227,7 +231,7 @@ plt.title('Error Status Code')
 plt.show()
 
 
-#Visualization size vs status
+#Visualization taille vs status
 
 plt.figure(figsize = (15, 5))
 plt.title('size vs. status')
