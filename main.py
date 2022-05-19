@@ -15,16 +15,26 @@ import pytz
 import matplotlib.pyplot as plt
 import woothee
 
+###################################extraction des fichiers compréssés##############################################
 
-###extraction des fichiers GZ###
 
+from pandas._libs.reshape import explode
+
+# choix dossiers des fichiers logs à traiter(input)
 INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/dataset1'
+# INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app1/ACCESS log'
+# INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app2/ACCESS log'
+# INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app3/ACCESS log'
+
+# choix du dossier de l'output
 OUTPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/dataset3'
+
+# choix de l'extension des fichiers compréssés
 GZIP_EXTENSION = '.gz'
 
 
 def Decompression_GZ(output_directory, zipped_name):
-    name_without_gzip_extension = zipped_name[:-len(GZIP_EXTENSION)]
+    name_without_gzip_extension = zipped_name[:-len(GZIP_EXTENSION)]  # enlèvement de '.gz'
     return os.path.join(output_directory, name_without_gzip_extension)
 
 
@@ -38,7 +48,7 @@ for file in os.scandir(INPUT_DIRECTORY):
 
     with gzip.open(file.path, 'rb') as file:
         with open(output_path, 'wb') as output_file:
-            output_file.write(file.read())
+            output_file.write(file.read())  # ce qui se trouve dans le compteur "file" on va l'ecrire dans outputfile
 
 # ###transformation en txt###
 # files=glob.glob('C:/Users/USER/Desktop/DS3/PFE/DataSet/dataset3/*')
@@ -53,73 +63,74 @@ for file in os.scandir(INPUT_DIRECTORY):
 #     read_file.close()
 
 
-###Fusionnement fichiers decompréssés###
+############################################Fusionnement fichiers decompréssés###########################################
 files2 = glob.glob('C:/Users/USER/Desktop/DS3/PFE/DataSet/dataset3/*')
 print(files2)
 
-list1 = [i for i in files2]  # Creating a list of filenames
+list1 = [i for i in files2]
 
 with open('C:/Users/USER/Desktop/DS3/PFE/DataSet/txtFinal.log', 'w') as outfile:
     for names in list1:
         with open(names) as infile:
             outfile.write(infile.read())
 
-        outfile.write("\n")
+        outfile.write("\n")  # txtfinal.log c'est le resultat de fusionnement
 
 
-###extraction liste des adresses IP###
-def reader(filename):
-    with open(filename) as f:
-        log = f.read()
+# ###extraction liste des adresses IP###
+# def reader(filename):
+#     with open(filename) as f:
+#         log = f.read()
 
-        regexp = r'\d{1,}\.\d{1,}\.\d{1,}\.\d{1,}'  # r pour lire les lignes telles qu'elles sont :(tq les tabs ou les nouvelles lignes)
+#         regexp = r'\d{1,}\.\d{1,}\.\d{1,}\.\d{1,}'  # r pour lire les lignes telles qu'elles sont :(tq les tabs ou les nouvelles lignes)
 
-        ips_list = re.findall(regexp, log)
-        return ips_list
-
-
-reader('C:/Users/USER/Desktop/DS3/PFE/DataSet/txtFinal.log')
+#         ips_list = re.findall(regexp, log)
+#         return ips_list
 
 
-###creer un fichier csv qui contient les adresses IP selon leurs frequences###
-def count(ips_list):
-    return (Counter(ips_list))
+# reader('C:/Users/USER/Desktop/DS3/PFE/DataSet/txtFinal.log')
 
 
-def write_csv(counter):
-    with open('C:/Users/USER/Desktop/DS3/PFE/DataSet/output1.csv', 'w') as csvfile:
-        writer = csv.writer(csvfile)
-        header = ['IP', 'FREQUENCY']
-        writer.writerow(header)
-
-        for item in counter:
-            writer.writerow((item, counter[item]))
+# ###creer un fichier csv qui contient les adresses IP selon leurs frequences###
+# def count(ips_list):
+#     return (Counter(ips_list))
 
 
-write_csv(count(reader('C:/Users/USER/Desktop/DS3/PFE/DataSet/txtFinal.log')))
+# def write_csv(counter):
+#     with open('C:/Users/USER/Desktop/DS3/PFE/DataSet/output1.csv', 'w') as csvfile:
+#         writer = csv.writer(csvfile)
+#         header = ['IP', 'FREQUENCY']
+#         writer.writerow(header)
+
+#         for item in counter:
+#             writer.writerow((item, counter[item]))
 
 
+# write_csv(count(reader('C:/Users/USER/Desktop/DS3/PFE/DataSet/txtFinal.log')))
+
+
+######fonction pour enlever les accolades pour string#######
 def parse_str(x):
-    """
-    enlever les accollades
-    """
     return x[1:-1]
 
 
+######fonction pour dépouiller la date######
 def parse_datetime(x):
-
-    dt = datetime.strptime(x[1:-7], '%d/%b/%Y:%H:%M:%S')
+    dt = datetime.strptime(x[1:-7],
+                           '%d/%b/%Y:%H:%M:%S')  # strtime est predefinie / x[1:-7] : c à d qu'on a négligé les accolades
 
     dt_tz = int(x[-6:-3]) * 60 + int(x[-3:-1])
-    return dt.replace(tzinfo=pytz.FixedOffset(dt_tz))
+    return dt.replace(tzinfo=pytz.FixedOffset(dt_tz))  # adaptation au fuseau horaire (tz: Time Zone)
 
 
+#### creation de la dataframe
 data = pd.read_csv(
     'C:/Users/USER/Desktop/DS3/PFE/DataSet/txtFinal.LOG',
-    sep=r'\s(?=(?:[^"]*"[^"]*")*[^"]*$)(?![^\[]*\])',
+    sep=r'\s(?=(?:[^"]*"[^"]*")*[^"]*$)(?![^\[]*\])',  # \s : white space
     engine='python',
-    na_values='-',  # Nan
-    header=None,  # automatically assign the first row of df (which is the actual column names) to the first row
+    na_values='-',  # valeurs Nan
+    header=None,
+    # attribuer automatiquement la première ligne de data (qui correspond aux noms de colonnes réels) à la première ligne
     usecols=[0, 3, 4, 5, 6, 7, 8],  # eliminer les 2 tirets qui se trouvent après l'@ IP .
     names=['ip', 'time', 'request', 'status', 'size', 'referer', 'user_agent'],
     converters={'time': parse_datetime,
@@ -129,36 +140,56 @@ data = pd.read_csv(
                 'referer': parse_str,
                 'user_agent': parse_str})
 
-data = data.sort_values(by="time")
+#####Labelisation des données   : 1 pour les donnees qui presentent une erreur , 0 sinn
+# error_label est le nom de la nouvelle colonne des labels
+data['error_label'] = ""
+for index, row in data.iterrows():
+    if (399 < data['status'][index] < 499):
+        data['error_label'][index] = 1
+    else:
+        data['error_label'][index] = 0
 
+# compter le nombre d'echantillons de labels 1 et de labels 0
+k = DataFrame(data.groupby(['error_label']).size().index)
+k['count'] = data.groupby(['error_label']).size().values
+print(k)
+
+# trier selon la date et exportation sous forme d'un fichier csv
+data = data.sort_values(by="time")
 data.to_csv(r'C:/Users/USER/Desktop/DS3/PFE/DataSet/OUTPUT.csv', index=False)
 
-# checking missing values
+# verfication de valeurs manquantes
 data.isnull().sum()
-
-
 
 # user agent confirmation
 userAgent = DataFrame(data.groupby(['user_agent']).size().index)
 userAgent['count'] = data.groupby(['user_agent']).size().values
 userAgent
 
+# status confirmation
+d = DataFrame(data.groupby(['status']).size().index)
+d['count'] = data.groupby(['status']).size().values
+d
 
 
-#regroupe un petit nombre d'éléments (1 % ou moins) en "autres".
-def replace_df_minors_with_others(df_intial, column_name):
+# regroupe les éléments qui forment une minorité (1 % ou moins) en "autres".
+def replace_df_minors_with_others(df_intial,
+                                  column_name):  # df_initial : dataframe avant modification , column_name: colonne concernée par la visualization
     elm_num = 1
     for index, row in df_intial.sort_values([column_name], ascending=False).iterrows():
-        if (row[column_name] / df_intial[column_name].sum()) > 0.01:
+        if (row[column_name] / df_intial[
+            column_name].sum()) > 0.01:  # pourcentage d'une certaine valeur par rapport à la somme de touts les valeurs de cette colonne
             elm_num = elm_num + 1
-
-    df_after = df_intial.sort_values([column_name], ascending=False).nlargest(elm_num, columns=column_name)#nlargest renvoie les n premières lignes triées par colonnes dans l'ordre décroissant.
-    df_after.loc[len(df_intial)] = ['others', df_intial.drop(df_after.index)[column_name].sum()]#.loc accéde à un groupe de lignes et de colonnes par libellé(s) ou tableau booléen.
+    # df_after est la nouvelle dataframe sans les petites valeurs
+    df_after = df_intial.sort_values([column_name], ascending=False).nlargest(elm_num,
+                                                                              columns=column_name)  # nlargest renvoie les n premières lignes triées par colonnes dans l'ordre décroissant.
+    # regroupement des petites valeurs dans "others"
+    df_after.loc[len(df_intial)] = ['others', df_intial.drop(df_after.index)[
+        column_name].sum()]  # .loc accéde à un groupe de lignes et de colonnes par libellé(s) ou tableau booléen.
     return df_after
 
 
-
-#For dictionaries
+# regroupe les éléments qui forment une minorité (1 % ou moins) en "autres". ( pour les dictionnaires )
 def replace_dict_minors_with_others(dict_initial):
     dict_after = {}
     others = 0
@@ -172,73 +203,89 @@ def replace_dict_minors_with_others(dict_initial):
     dict_after['others'] = others
     return dict_after
 
-#analyser user agent avec woothee et suppression de la partie facultative
 
-ua_counter = {}
-os_counter = {}
+# analyser user agent avec woothee et suppression de la partie facultative
 
-for index, row in userAgent.sort_values(['count'], ascending=False).iterrows(): #for index, row pour parcourir un dataframe.
-    ua = woothee.parse(row['user_agent'])    #woothee est un analyseur de chaînes d'agent utilisateur.
-    uaKey = ua.get('name') + ' (' + ua.get('version') + ')'
+ua_counter = {}  # ua : variable userAgent
+os_counter = {}  #
+
+for index, row in userAgent.sort_values(['count'],
+                                        ascending=False).iterrows():  # for index, row pour parcourir un dataframe.
+    ua = woothee.parse(row['user_agent'])  # woothee est un analyseur(parser en anglais) de chaînes d'agent utilisateur.
+    uaKey = ua.get('name') + ' (' + ua.get(
+        'version') + ')'  # uaKey est une valeur contenant le nom et la version de chaque user agent
+
+    # assurer l'ajout d'un nouvel user agent seulement une fois.
     if not uaKey in ua_counter:
         ua_counter[uaKey] = 0
     ua_counter[uaKey] = ua_counter[uaKey] + 1
-    osKey = ua.get('os') + ' (' + ua.get('os_version') + ')'
+    osKey = ua.get('os') + ' (' + ua.get(
+        'os_version') + ')'  # osKey est une valeur contenant le systeme d'exploitaion et la version de chaque OS
+
+    # assurer l'ajout d'un nouvel user agent seulement une fois.
     if not osKey in os_counter:
         os_counter[osKey] = 0
     os_counter[osKey] = os_counter[osKey] + 1
 
-
-
-
-
-plt.figure(figsize = (15, 10))
-plt.subplot(1,2,1)
+# pie chart client OS
+plt.figure(figsize=(40, 10))
 plt.title('Client OS')
 os_counter_with_others = replace_dict_minors_with_others(os_counter)
-plt.pie(os_counter_with_others.values(), labels = os_counter_with_others.keys(), autopct = '%1.1f%%', shadow = True, startangle = 90)
-
-plt.subplot(1,2,2)
-plt.title('User Agent')
-ua_counter_with_others = replace_dict_minors_with_others(ua_counter)
-plt.pie(ua_counter_with_others.values(), labels = ua_counter_with_others.keys(), autopct = '%1.1f%%', shadow = True, startangle = 90)
+patches, texts = plt.pie(os_counter_with_others.values(), startangle=90)
+plt.legend(patches, os_counter_with_others, loc="upper left")
 plt.show()
 
+# pie chart User Agent
+plt.figure(figsize=(50, 10))
+plt.title('User Agent')
+ua_counter_with_others = replace_dict_minors_with_others(ua_counter)
+patches, texts = plt.pie(ua_counter_with_others.values(), startangle=90)
+plt.legend(patches, os_counter_with_others, loc="upper right")
+plt.show()
 
+# visualisation access vs time
+plt.figure(figsize=(15, 5))
+access = data['request']
+access.index = data['time']
+access = access.resample('S').count()
+access.index.name = 'Time'
+access.plot()
+plt.title('Total Access')
+plt.ylabel('Access')
+plt.show()
 
-data['status']
+# visualisation du code de réponse
+plt.figure(figsize=(10, 10))
+plt.pie(data.groupby([data['status'] // 100]).count().time, counterclock=False, startangle=90)
 
+labels = ['100', '101', '102', '103', '200', '201', '202', '203', '204', '205', '206', '207', '208', '226', '300',
+          '301', '302', '303', '304', '305', '306', '307', '308', '400', '401', '402', '403', '404', '405', '406',
+          '407', '408', '409', '410', '411', '412', '413', '414', '415', '416', '417', '418', '421', '422', '423',
+          '424', '425', '426', '427', '428', '429', '431', '451', '500', '501', '502', '503', '504', '505', '506',
+          '507', '508', '510', '511']
+colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'red', 'grey', 'green', 'pink', 'black']
+patches, texts = plt.pie(labels, colors=colors, startangle=90)
+plt.legend(patches, labels, loc="best")
+# Set aspect ratio to be equal so that pie is drawn as a circle.
+plt.axis('equal')
+plt.tight_layout()
+plt.pie(data.groupby(['status']).count().time, counterclock=False, startangle=90, radius=0.7)
 
-d = DataFrame(data.groupby(['status']).size().index)
-d['count'] = data.groupby(['status']).size().values
-d
-
-
-
-
-
-#visualisation du code de réponse
-plt.figure(figsize = (10, 10))
-plt.pie(data.groupby([data['status'] // 100]).count().time,  counterclock=False, startangle=90)
-
-labels = ['200', '206', '301', '302', '304', '400', '403', '404', '408', '413', '421']
-plt.pie(data.groupby(['status']).count().time, labels=labels, counterclock=False, startangle=90, radius=0.7)
-
-centre_circle = plt.Circle((0,0),0.4, fc='white')
+centre_circle = plt.Circle((0, 0), 0.4, fc='white')
 fig = plt.gcf()
 fig.gca().add_artist(centre_circle)
 plt.title('Error Status Code')
 plt.show()
 
+# Visualization taille vs status
 
-#Visualization taille vs status
-
-plt.figure(figsize = (15, 5))
+plt.figure(figsize=(15, 5))
 plt.title('size vs. status')
-plt.scatter(data['size']/1000, data['status'], marker='.')
+plt.scatter(data['size'] / 1000, data['status'], marker='.')
 plt.xlabel('Size(KB)')
 plt.ylabel('status')
 plt.grid()
+plt.show()
 
 
 
