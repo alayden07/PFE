@@ -227,7 +227,7 @@ k['count'] = access_data.groupby(['error_label']).size().values
 print(k)
 
 # trier selon la date et exportation sous forme d'un fichier csv
-access_data = access_data.sort_values(by="time")
+access_data = access_data.sort_values(by="Time")
 access_data.to_csv(r'C:/Users/USER/Desktop/DS3/PFE/DataSet/Access_OUTPUT.csv', index=False)
 
 # verfication de valeurs manquantes
@@ -329,7 +329,7 @@ plt.show()
 
 # visualisation du code de réponse
 plt.figure(figsize=(10, 10))
-plt.pie(access_data.groupby([access_data['status'] // 100]).count().time, counterclock=False, startangle=90)
+plt.pie(access_data.groupby([access_data['status'] // 100]).count().Time, counterclock=False, startangle=90)
 
 labels = ['400', '401', '402', '403', '404', '405', '406', '407', '408', '409', '410']
 patches3, texts = plt.pie(labels, startangle=90)
@@ -338,7 +338,7 @@ plt.legend(patches3, labels, loc="best")
 # Set aspect ratio to be equal so that pie is drawn as a circle.
 plt.axis('equal')
 plt.tight_layout()
-plt.pie(access_data.groupby(['status']).count().time, counterclock=False, startangle=90, radius=0.7)
+plt.pie(access_data.groupby(['status']).count().Time, counterclock=False, startangle=90, radius=0.7)
 
 centre_circle = plt.Circle((0, 0), 0.4, fc='white')
 fig = plt.gcf()
@@ -396,8 +396,6 @@ def my_func(arg):
     return arg
 
 
-# x1_train=np.asarray(x_train).astype('int32')
-# y1_train=np.asarray(y_train).astype('int32')
 x_train = my_func(x_train)
 y_train = my_func(y_train)
 x_test = my_func(x_test)
