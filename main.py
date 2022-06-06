@@ -30,6 +30,7 @@ from keras.layers import Bidirectional
 from keras.optimizers import RMSprop
 from keras.utils import to_categorical
 from keras.callbacks import EarlyStopping
+import dill
 
 ###################################extraction des fichiers compréssés##############################################
 
@@ -356,32 +357,46 @@ plt.ylabel('status')
 plt.grid()
 plt.show()
 
-# division de la dataframe label_access :etiquettes/ data_acess:donnees sans etiquettes
-label_access = access_data['error_label']
-data_access_without_labels = access_data['request'].astype(str)
+# checking nan values in 'request' column
+check_for_nan = access_data['request'].isnull()
+print(check_for_nan)
 
-# data_access_without_labels['request'] = data_access_without_labels['request']
-
+# status_as_str=access_data['status'].astype(str)
 max_words = 1000
-max_len = 150
+max_len = 160
+text_data = ((access_data[['request', 'user_agent', 'status']]).astype(str)).apply(' '.join, axis=1)
+
 # toknizer:tokenization basically refers to splitting up a larger body of text into smaller lines, words or even creating words for a non-English language
 tok = Tokenizer(num_words=max_words)  # text to numeric
-tok.fit_on_texts(data_access_without_labels)
+tok.fit_on_texts(text_data)
 # affectation DES SCORES aux mots
-sequences = (tok.texts_to_sequences(data_access_without_labels))  # astype(str) car float has no attribute'lower'
+text_seq = (tok.texts_to_sequences(text_data))
+sequences_matrix = sequence.pad_sequences(text_seq, maxlen=max_len,
+                                          padding='post')  # post c a d remplir avec des 0 A LA FIN ET NON PAS AU DEBUT
+label_access = access_data['error_label']
+
+# df2=df2.dropna(axis=0)
+# division de la dataframe label_access :etiquettes/ data_acess:donnees sans etiquettes
+# data_access_without_labels = access_data[['request','user_agent']].astype(str)
+
+
+# data_access_without_labels = access_data.drop(['ip','Time','referer','user_agent','error_label'],axis=1).astype(str)
+
+
+# astype(str) car float has no attribute'lower'
+
 
 # mettre les donnees en mm longuer de vecteur
 # padding pour le remplissage des cases manquantes avec des 0
-sequences_matrix = sequence.pad_sequences(sequences, maxlen=max_len,
-                                          padding='post')  # post c a d remplir avec des 0 A LA FIN ET NON PAS AU DEBUT
+
 
 from sklearn.model_selection import train_test_split
 
-x_train, x_test, y_train, y_test = train_test_split(sequences_matrix, label_access, test_size=0.33, random_state=0)
+x_train, x_test, y_train, y_test = train_test_split(sequences_matrix, label_access, test_size=0.3, random_state=0)
 
 model = Sequential()
 model.add(Embedding(1000, 150, input_length=max_len))  # cree hiddenlayer
-model.add(GRU(150, dropout=0.2))  # 150 :max_len
+model.add(Bidirectional(GRU(150, dropout=0.5)))  # 150 :max_len
 # dropout : valeur entre 0 et 1 (marge d'erreur)
 
 # model.add(Bidirectional(GRU(150, dropout=0.5))) # meilleure accuracy avec blstm
@@ -400,12 +415,15 @@ x_train = my_func(x_train)
 y_train = my_func(y_train)
 x_test = my_func(x_test)
 y_test = my_func(y_test)
-history = model.fit(x_train, y_train, batch_size=128, epochs=10,
-                    validation_split=0.4)  # VALIDATION split 0.2 yaani 80% lel train w 20 lel test
+
+# #Chercher les meilleurs hyperparamètres de votre modèle.
+# from sklearn.model_selection import GridSearchCV
+# parameters = {'batch_size':[24, 86, 100, 1000], 'validation_split':[0.1, 0.2, 0.3, 0.5], 'epochs':[10, 20, 30, 40]}
+# clf = GridSearchCV(model, parameters)
+# clf.fit(x_train,y_train)
+history = model.fit(x_train, y_train, batch_size=128, epochs=10, validation_split=0.2, callbacks=[
+    EarlyStopping(monitor='val_loss', min_delta=0.0001)])  # VALIDATION split 0.2 yaani 80% lel train w 20 lel test
 accr = model.evaluate(x_test, y_test)
 
 print('test set \n Loss:{:0.3f}\n Accuracy: {:0.3f}'.format(accr[0], accr[1]))
-
-
-
 
