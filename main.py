@@ -40,12 +40,12 @@ from sklearn.metrics import classification_report
 
 # choix dossiers des fichiers apache access logs à traiter(input)
 # choix dossiers des fichiers apache access logs à traiter(input)
-Access_INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/dataset1'
+Access_INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/InputAccess'
 # INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app1/ACCESS log'
 # INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app2/ACCESS log'
 # INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app3/ACCESS log'
 # choix dossier des fichiers apache error logs à traiter(input)
-Error_INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/data_sfm/data_app1/Error log'
+Error_INPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/InputError'
 
 # choix du dossier de l'output des fichiers apache access log
 Access_OUTPUT_DIRECTORY = 'C:/Users/USER/Desktop/DS3/PFE/DataSet/OutputAccess'
@@ -196,13 +196,18 @@ access_data = pd.read_csv(
     header=None,
     # attribuer automatiquement la première ligne de data (qui correspond aux noms de colonnes réels) à la première ligne
     usecols=[0, 3, 4, 5, 6, 7, 8],  # eliminer les 2 tirets qui se trouvent après l'@ IP .
-    names=['ip', 'Time', 'request', 'status', 'size', 'referer', 'user_agent'],
-    converters={'Time': parse_datetime,
+    names=['ip', 'time', 'request', 'status', 'size', 'referer', 'user_agent'],
+    converters={'time': parse_datetime,
                 'request': parse_str,
                 'status': int,
                 'size': int,
                 'referer': parse_str,
-                'user_agent': parse_str})
+                'user_agent': parse_str
+                })
+
+# trier selon la date et exportation sous forme d'un fichier csv
+access_data = access_data.sort_values(by="time")
+access_data.to_csv(r'C:/Users/USER/Desktop/DS3/PFE/DataSet/Access_OUTPUT.csv')
 
 #####Labelisation des données dataframe access   : 1 pour les donnees qui presentent une erreur , 0 sinn
 # error_label est le nom de la nouvelle colonne des labels
@@ -221,7 +226,7 @@ print(check_for_nan)
 access_data = access_data[access_data['request'].notna()]
 
 # trier selon la date et exportation sous forme d'un fichier csv
-access_data = access_data.sort_values(by="Time")
+access_data = access_data.sort_values(by="time")
 access_data.to_csv(r'C:/Users/USER/Desktop/DS3/PFE/DataSet/Access_OUTPUT.csv')
 
 # verfication de valeurs manquantes
@@ -319,7 +324,7 @@ plt.show()
 # access = access_data['request']
 # access.index = access_data['time']
 # access = access.resample('S').count()
-# access.index.name = 'Time'
+# access.index.name = 'time'
 # access.plot()
 # plt.title('Total Access')
 # plt.ylabel('Access')
@@ -328,7 +333,7 @@ plt.show()
 
 # visualisation du code de réponse
 plt.figure(figsize=(10, 10))
-plt.pie(access_data.groupby([access_data['status'] // 100]).count().Time, counterclock=False, startangle=90)
+plt.pie(access_data.groupby([access_data['status'] // 100]).count().time, counterclock=False, startangle=90)
 
 labels = ['400', '401', '402', '403', '404', '405', '406', '407', '408', '409', '410']
 patches3, texts = plt.pie(labels, startangle=90)
@@ -337,7 +342,7 @@ plt.legend(patches3, labels, loc="best")
 # Set aspect ratio to be equal so that pie is drawn as a circle.
 plt.axis('equal')
 plt.tight_layout()
-plt.pie(access_data.groupby(['status']).count().Time, counterclock=False, startangle=90, radius=0.7)
+plt.pie(access_data.groupby(['status']).count().time, counterclock=False, startangle=90, radius=0.7)
 
 centre_circle = plt.Circle((0, 0), 0.4, fc='white')
 fig = plt.gcf()
@@ -355,52 +360,52 @@ plt.ylabel('status')
 plt.grid()
 plt.show()
 
+#####Labelisation des données dataframe apache error  :
+
+error_data['error_labels'] = ""
+for index, row in error_data.iterrows():
+    if 'severity "CRIT' in error_data['Message'][index]:
+        error_data['error_labels'][index] = 1
+    elif 'severity "ALERT' in error_data['Message'][index]:
+        error_data['error_labels'][index] = 1
+    elif 'severity "EMERG' in error_data['Message'][index]:
+        error_data['error_labels'][index] = 1
+
+    else:
+        error_data['error_labels'][index] = 0
+
+k = DataFrame(error_data.groupby(['error_labels']).size().index)
+k['count'] = error_data.groupby(['error_labels']).size().values
+print(k)
+
 max_words = 1000
 max_len = 160
+data = error_data['Message']
 
-# les données textuelles seront la colonne request et la colonne user_agent
-text_data = ((access_data[['request', 'user_agent']]).astype(str)).apply(' '.join, axis=1)
-
-# tokenization des données
+# toknizer:tokenization basically refers to splitting up a larger body of text into smaller lines, words or even creating words for a non-English language
 tok = Tokenizer(num_words=max_words)  # text to numeric
-tok.fit_on_texts(text_data)  # affectation DES SCORES aux mots
-
-# séquençage des données
-text_seq = (tok.texts_to_sequences(text_data))
-
-sequences_matrix = sequence.pad_sequences(text_seq, maxlen=max_len, padding='post')
-# mettre les donnees en mm longuer de vecteur
-# padding pour le remplissage des cases manquantes avec des 0
-# post c a d remplir avec des 0 A LA FIN ET NON PAS AU DEBUT
-
-
-# choisir le label
-label_access = access_data['error_label']
+tok.fit_on_texts(data)
+# affectation DES SCORES aux mots
+text_seq = (tok.texts_to_sequences(data))
+sequences_matrix = sequence.pad_sequences(text_seq, maxlen=max_len,
+                                          padding='post')  # post c a d remplir avec des 0 A LA FIN ET NON PAS AU DEBUT
+label_error = error_data['error_labels']
 
 from sklearn.model_selection import train_test_split
 
-x_train, x_test, y_train, y_test = train_test_split(sequences_matrix, label_access, test_size=0.3, random_state=0)
+x_train, x_test, y_train, y_test = train_test_split(sequences_matrix, label_error, test_size=0.3, random_state=0)
 
-model = Sequential()  # Le modèle séquentiel est un empilement linéaire de couches.
-model.add(Embedding(1000, 150, input_length=max_len))  # cree hiddenlayer
-# 1000: maximum features(words)
-# 150 : espace vectoriel de 150 dimensions dans lequel les mots seront intégrés et des documents d'entrée de (maxlen) mots chacun.
-
-
-# model.add(Bidirectional(LSTM(150, dropout=0.5)))#dropout : marge d'erreur :valeur entre 0 et 1
-model.add(Bidirectional(GRU(150, dropout=0.5)))  # 150: Dimension de l'output
+model = Sequential()
+model.add(Embedding(750, 150, input_length=max_len))  # cree hiddenlayer
+# model.add(Bidirectional(LSTM(150, dropout=0.5))) #150: MAXLEN  #dropout : valeur entre 0 et 1 (marge d'erreur)
+model.add(Bidirectional(GRU(150, dropout=0.5)))  # meilleure accuracy avec blstm
 # model.add(LSTM(150, dropout=0.5))
 # model.add(GRU(150, dropout=0.5))
+model.add(Dense(150, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))  # khater binary (tetkteb sur un seul bit) output layer
+model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
 
 
-model.add(Dense(150, activation='relu'))  # input layer
-model.add(Dense(1,
-                activation='sigmoid'))  # output layer :1 : un seul bit car le résultat s'ecrit sur un seul bit ( soit 1 soit 0)
-
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-
-# conversion des données en des tensors
 def my_func(arg):
     arg = tf.convert_to_tensor(arg, dtype=tf.int32)
     return arg
@@ -411,49 +416,40 @@ y_train = my_func(y_train)
 x_test = my_func(x_test)
 y_test = my_func(y_test)
 
-# lancement de l'apprentissage
-# 10: nombre de blocs
-# 128 taille du bloc
-# 0.2 : prendre 20% du dataset pour le test
-history = model.fit(x_train, y_train, batch_size=128, epochs=10, validation_split=0.2, callbacks=[
+history = model.fit(x_train, y_train, batch_size=64, epochs=15, validation_split=0.3, callbacks=[
     EarlyStopping(monitor='val_loss', min_delta=0.0001)])  # VALIDATION split 0.2 yaani 80% lel train w 20 lel test
+
 accr = model.evaluate(x_test, y_test)
 
+# pred: array contenant les valeurs prédites continues
 pred = model.predict((x_test))
+
+# round pour faire l'arrondi ( les valeurs prés de 1 seront transformées en des "1" , les valeurs prés de 0 serons transformées en des "0")
 pred = np.round_(pred)
+
+from matplotlib import pyplot
+
+pyplot.plot(history.history['loss'])
+pyplot.plot(history.history['val_loss'])
+pyplot.title('model train vs validation loss')
+pyplot.ylabel('loss')
+pyplot.xlabel('epoch')
+pyplot.legend(['train', 'validation'], loc='upper right')
+pyplot.show()
+
+# summarize history for accuracy
+pyplot.plot(history.history['accuracy'])
+pyplot.plot(history.history['val_accuracy'])
+pyplot.title('model accuracy')
+pyplot.ylabel('accuracy')
+pyplot.xlabel('epoch')
+pyplot.legend(['train', 'test'], loc='upper left')
+pyplot.show()
+
+print('test set \n Loss:{:0.3f}\n Accuracy: {:0.3f}'.format(accr[0], accr[1]))
 
 C = classification_report(y_test, pred)
 print(C)
-
-# print('test set \n Loss:{:0.3f}\n Accuracy: {:0.3f}'.format(accr[0],accr[1]))
-
-
-# from matplotlib import pyplot
-# pyplot.plot(history.history['loss'])
-# pyplot.plot(history.history['val_loss'])
-# pyplot.title('model train vs validation loss')
-# pyplot.ylabel('loss')
-# pyplot.xlabel('epoch')
-# pyplot.legend(['train', 'validation'], loc='upper right')
-# pyplot.show()
-
-
-# # summarize history for accuracy
-# pyplot.plot(history.history['accuracy'])
-# pyplot.plot(history.history['val_accuracy'])
-# pyplot.title('model accuracy')
-# pyplot.ylabel('accuracy')
-# pyplot.xlabel('epoch')
-# pyplot.legend(['train', 'test'], loc='upper left')
-# pyplot.show()
-
-
-# #enregistrement du modele
-# model.save('access.model')
-
-# #utilisation du modèle
-
-
 
 
 
